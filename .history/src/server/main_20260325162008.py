@@ -1,0 +1,131 @@
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sqlmodel import Session, select
+from datetime import timedelta
+from typing import List, Optional
+from jose import jwt, JWTError
+from contextlib import asynccontextmanager
+
+import sys
+import os
+
+# Adiciona o diretório src ao path para importações relativas funcionarem
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from .agent_manager import agent_manager
+from .database import engine, get_session, create_db_and_tables
+from .models import User, UserCreate, HistoryItem, HistoryItemCreate
+from .auth import (
+    verify_password,
+    get_password_hash,
+    create_access_token,
+    SECRET_KEY,
+    ALGORITHM
+)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db_and_tables()
+    yield
+
+app = FastAPI(title="YouTube Music Pro Sync API", lifespan=lifespan)
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+
+# --- Auth Dependencies ---
+async def get_current_user(token: str = Depends(oauth2_scheme), session: Session = Depends(get_session)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    user = session.exec(select(User).where(User.username == username)).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+# --- Routes ---
+
+@app.post("/auth/register", status_code=status.HTTP_201_CREATED)
+def register(user_data: UserCreate, session: Session = Depends(get_session)):
+    existing_user = session.exec(select(User).where(User.username == user_data.username)).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+
+    new_user = User(
+        username=user_data.username,
+        email=user_data.email,
+        hashed_password=get_password_hash(user_data.password)
+    )
+    session.add(new_user)
+    session.commit()
+    session.refresh(new_user)
+    return {"id": new_user.id, "username": new_user.username}
+
+@app.post("/auth/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
+    user = session.exec(select(User).where(User.username == form_data.username)).first()
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token = create_access_token(data={"sub": user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/history", response_model=List[HistoryItem])
+def get_history(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+    limit: int = 20,
+    offset: int = 0
+):
+    history = session.exec(
+        select(HistoryItem)
+        .where(HistoryItem.user_id == current_user.id)
+        .order_by(HistoryItem.timestamp.desc())
+        .offset(offset)
+        .limit(limit)
+    ).all()
+    return history
+
+@app.post("/history", status_code=status.HTTP_201_CREATED)
+def add_to_history(
+    item_data: HistoryItemCreate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    new_item = HistoryItem(
+        **item_data.model_dump(),
+        user_id=current_user.id
+    )
+    session.add(new_item)
+    session.commit()
+    session.refresh(new_item)
+    return new_item
+
+@app.get("/agents")
+def list_agents():
+    """Lista os nomes dos agentes carregados da pasta .agent/agents."""
+    return {"available_agents": list(agent_manager.agents.keys())}
+
+@app.get("/agents/{name}")
+def get_agent(name: str):
+    instructions = agent_manager.get_agent_instructions(name)
+    if not instructions:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return {"name": name, "instructions": instructions}
+
+@app.get("/")
+def read_root():
+    return {"message": "YouTube Music Pro Sync API is online", "docs": "/docs"}

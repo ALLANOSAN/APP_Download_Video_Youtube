@@ -1,0 +1,251 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 450px;
+  height: 600px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+  overflow: hidden;
+}
+
+.container {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+header h1 {
+  font-size: 1.4em;
+  color: #e94560;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.search-box {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.search-box input {
+  flex: 1;
+  padding: 12px 15px;
+  border: 2px solid #4a4a6a;
+  border-radius: 25px;
+  background: #0f3460;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.search-box input:focus {
+  border-color: #e94560;
+  box-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
+}
+
+.search-box input::placeholder {
+  color: #888;
+}
+
+.search-box button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 25px;
+  background: #e94560;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.search-box button:hover {
+  background: #ff6b6b;
+  transform: scale(1.05);
+}
+
+.search-box button:active {
+  transform: scale(0.95);
+}
+
+.status {
+  text-align: center;
+  padding: 10px;
+  color: #888;
+  font-size: 13px;
+}
+
+.status.error {
+  color: #ff6b6b;
+}
+
+.status.loading {
+  color: #ffd700;
+}
+
+.results {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 5px;
+}
+
+/* Scrollbar personalizada */
+.results::-webkit-scrollbar {
+  width: 6px;
+}
+
+.results::-webkit-scrollbar-track {
+  background: #1a1a2e;
+  border-radius: 3px;
+}
+
+.results::-webkit-scrollbar-thumb {
+  background: #4a4a6a;
+  border-radius: 3px;
+}
+
+.results::-webkit-scrollbar-thumb:hover {
+  background: #e94560;
+}
+
+.video-card {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(15, 52, 96, 0.6);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.video-card:hover {
+  background: rgba(15, 52, 96, 0.9);
+  border-color: #e94560;
+  transform: translateX(5px);
+  box-shadow: 0 4px 15px rgba(233, 69, 96, 0.2);
+}
+
+.video-thumbnail {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.video-thumbnail img {
+  width: 120px;
+  height: 68px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.video-duration {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.video-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.video-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.video-channel {
+  font-size: 11px;
+  color: #aaa;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.video-stats {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: #888;
+}
+
+.video-stats span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+footer {
+  text-align: center;
+  padding: 10px 0 5px;
+  font-size: 11px;
+  color: #666;
+  border-top: 1px solid #4a4a6a;
+  margin-top: 10px;
+}
+
+/* Loading animation */
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #4a4a6a;
+  border-top-color: #e94560;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.empty-state .icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.empty-state p {
+  font-size: 14px;
+}
