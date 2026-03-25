@@ -39,4 +39,4 @@ jobs:
       - name: Verify backend health
         run: |
           sleep 10
-          curl -f https://YOUR_APP_NAME.fly.dev/ || true
+          curl -f https://app-download-video-youtube.fly.dev/ || true
