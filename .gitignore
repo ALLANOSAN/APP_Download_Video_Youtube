@@ -1,3 +1,7 @@
 /binaries/
 /dist/
+/downloads/# Ignore heavy build artifacts and assets
+/binaries/
+/dist/
 /downloads/
+
