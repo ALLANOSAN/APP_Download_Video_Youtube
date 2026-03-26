@@ -1,6 +1,6 @@
 pyinstaller>=6.0.0
 pillow>=10.0.0
-fastapi>=0.135.2
+fastapi[standard]
 uvicorn>=0.21.1
 sqlmodel>=0.0.37
 sqlalchemy>=2.0
