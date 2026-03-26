@@ -296,15 +296,11 @@ class _MyAppState extends State<MyApp> {
         // Se o servidor retornar o status em texto ou JSON, tratamos aqui
         await _setStatus('Status: $res');
 
-        if (res.toLowerCase().contains('concluído') ||
-            res.toLowerCase().contains('finished') ||
-            res.toLowerCase().contains('100%')) {
-          await NotificationService.show(
-              'Sucesso', 'Download concluído no servidor!');
+        if (res.toLowerCase().contains('concluído') || res.toLowerCase().contains('finished') || res.toLowerCase().contains('100%')) {
+          await NotificationService.show('Sucesso', 'Download concluído no servidor!');
           return false; // Para o loop
         }
-        if (res.toLowerCase().contains('erro') ||
-            res.toLowerCase().contains('fail')) return false;
+        if (res.toLowerCase().contains('erro') || res.toLowerCase().contains('fail')) return false;
       } catch (e) {
         return false;
       }
@@ -544,8 +540,8 @@ class _MyAppState extends State<MyApp> {
                           setState(() {
                             _taskId.text = t;
                           });
-                          await _setStatus(
-                              'Processando... acompanhando progresso...');
+                          await _setStatus('Servidor processando ID: $t');
+                          await _setStatus('Processando... acompanhando progresso...');
                           _startPolling(t);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
