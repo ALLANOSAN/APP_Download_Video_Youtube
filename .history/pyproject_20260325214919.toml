@@ -1,0 +1,56 @@
+[project]
+name = "youtube-downloader"
+version = "1.0.0"
+description = "YouTube Music Downloader with PySide6 GUI"
+requires-python = ">=3.10"
+dependencies = [
+    "buildozer>=1.5.0",
+    "fastapi[standard]>=0.135.2",
+    "flet==0.21.2",
+    "httpx>=0.28.1",
+    "kivy>=2.3.1",
+    "passlib[bcrypt]>=1.7.4",
+    "pillow>=12.1.0",
+    "psycopg2-binary>=2.9.11",
+    "PySide6>=6.5.0",
+    "pytest>=9.0.2",
+    "python-jose[cryptography]>=3.5.0",
+    "python-multipart>=0.0.22",
+    "setuptools>=80.9.0",
+    "sqlmodel>=0.0.37",
+    "uvicorn>=0.42.0",
+    "yt-dlp>=2023.0.0",
+]
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.14"
+extraPaths = ["src"]
+typeCheckingMode = "off"
+
+[tool.ty]
+python-version = "3.14"
+venv-path = ".venv"
+
+[tool.ty.environment]
+extra-paths = ["src", "."]
+
+[tool.ty.rules]
+ignore = ["unresolved-import"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501", "E402"]
+
+[tool.ruff.lint.per-file-ignores]
+"main.py" = ["E402"]
+
+[tool.uv.workspace]
+members = [
+    "android-app",
+]
