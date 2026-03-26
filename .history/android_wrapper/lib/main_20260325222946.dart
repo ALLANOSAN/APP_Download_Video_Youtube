@@ -27,8 +27,7 @@ class ApiClient {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'username': username, 'password': password}),
     );
-    if (r.statusCode == 201 || r.statusCode == 200)
-      return 'Usuário criado com sucesso';
+    if (r.statusCode == 201 || r.statusCode == 200) return 'Usuário criado com sucesso';
     return 'Falha registrando: ${r.statusCode} ${r.body}';
   }
 
@@ -84,14 +83,9 @@ class _MyAppState extends State<MyApp> {
             children: [
               Text('Backend: $backendUrl'),
               const SizedBox(height: 16),
-              TextField(
-                  controller: _username,
-                  decoration: const InputDecoration(labelText: 'Usuário')),
+              TextField(controller: _username, decoration: const InputDecoration(labelText: 'Usuário')),
               const SizedBox(height: 8),
-              TextField(
-                  controller: _password,
-                  decoration: const InputDecoration(labelText: 'Senha'),
-                  obscureText: true),
+              TextField(controller: _password, decoration: const InputDecoration(labelText: 'Senha'), obscureText: true),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -99,8 +93,7 @@ class _MyAppState extends State<MyApp> {
                     child: ElevatedButton(
                       onPressed: () async {
                         await _setStatus('Registrando...');
-                        final t = await _api.register(
-                            _username.text.trim(), _password.text.trim());
+                        final t = await _api.register(_username.text.trim(), _password.text.trim());
                         await _setStatus(t);
                       },
                       child: const Text('Registrar'),
@@ -111,8 +104,7 @@ class _MyAppState extends State<MyApp> {
                     child: ElevatedButton(
                       onPressed: () async {
                         await _setStatus('Login...');
-                        final t = await _api.login(
-                            _username.text.trim(), _password.text.trim());
+                        final t = await _api.login(_username.text.trim(), _password.text.trim());
                         await _setStatus(t);
                       },
                       child: const Text('Login'),
