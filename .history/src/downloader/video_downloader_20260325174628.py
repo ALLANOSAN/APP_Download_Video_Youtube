@@ -24,19 +24,19 @@ def resolve_binary(name: str, env_var: str) -> Path:
     if env_path:
         candidates.append(Path(env_path))
 
-    # No Docker/Linux, shutil.which é a forma mais confiável de achar binários do sistema
+    # 1. Tenta o PATH do sistema (Essencial para Docker/Fly.io)
     system_path = shutil.which(name)
     if system_path:
         return Path(system_path)
 
-    # Usa binários já empacotados no projeto (root/binaries)
+    # 2. Pasta 'binaries' na raiz do projeto
     root = Path(__file__).resolve().parents[2]
     candidates.append(root / "binaries" / name)
 
-    # Caminho relativo em src (quando se executa de mobile/main_flet.py)
+    # 3. Pasta 'binaries' dentro de src
     candidates.append(Path(__file__).resolve().parents[1] / "binaries" / name)
 
-    # Caminho de trabalho atual
+    # 4. Pasta 'binaries' no diretório de execução
     candidates.append(Path.cwd() / "binaries" / name)
 
     for candidate in candidates:

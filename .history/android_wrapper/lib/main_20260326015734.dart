@@ -518,11 +518,11 @@ class _MyAppState extends State<MyApp> {
                           setState(() {
                             _taskId.text = t;
                           });
+                          await _setStatus(
+                              'Download processando no servidor...');
                           await _setStatus('Servidor processando ID: $t');
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content:
-                                    Text('Download iniciado no servidor!')),
+                            const SnackBar(content: Text('Download iniciado no servidor!')),
                           );
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
