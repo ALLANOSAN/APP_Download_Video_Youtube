@@ -379,7 +379,7 @@ class _MyAppState extends State<MyApp> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                initialValue: _downloadMode,
+                value: _downloadMode,
                 items: const [
                   DropdownMenuItem(value: 'audio', child: Text('Audio')),
                   DropdownMenuItem(value: 'video', child: Text('Video')),
@@ -457,11 +457,6 @@ class _MyAppState extends State<MyApp> {
               const SizedBox(height: 16),
               Text(
                   'Token: ${_accessToken.isNotEmpty ? _accessToken : 'não logado'}'),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: _logout,
-                child: const Text('Logout'),
-              ),
               const SizedBox(height: 12),
               if (_historyItems.isNotEmpty) ...[
                 const Text('Histórico',

@@ -1,44 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 
 const String backendUrl = 'https://app-download-video-youtube.fly.dev';
 
-class NotificationService {
-  static final _localNotifications = FlutterLocalNotificationsPlugin();
-
-  static Future<void> init() async {
-    const settings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    await _localNotifications.initialize(
-      const InitializationSettings(android: settings),
-    );
-  }
-
-  static Future<void> show(String title, String body) async {
-    const androidDetails = AndroidNotificationDetails(
-      'channel_id',
-      'Notifications',
-      channelDescription: 'App notifications',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-    await _localNotifications.show(
-      0,
-      title,
-      body,
-      const NotificationDetails(android: androidDetails),
-      payload: '',
-    );
-  }
-}
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await NotificationService.init();
+void main() {
   runApp(const MyApp());
 }
 
@@ -46,15 +12,7 @@ class ApiClient {
   final String baseUrl;
   String? _token;
 
-  ApiClient({this.baseUrl = backendUrl});
-
-  String? get token => _token;
-
-  bool get isAuthenticated => _token != null;
-
-  void logout() {
-    _token = null;
-  }
+  const ApiClient({this.baseUrl = backendUrl});
 
   Map<String, String> get _jsonHeaders => {
         'Content-Type': 'application/json',
@@ -75,16 +33,7 @@ class ApiClient {
     throw Exception('Erro / ${r.statusCode}: ${r.body}');
   }
 
-  bool _handleUnauthorized(http.Response r) {
-    if (r.statusCode == 401) {
-      logout();
-      return true;
-    }
-    return false;
-  }
-
-  Future<String> register(
-      String username, String email, String password) async {
+  Future<String> register(String username, String email, String password) async {
     final r = await http.post(
       Uri.parse('$baseUrl/auth/register'),
       headers: _jsonHeaders,
@@ -94,9 +43,7 @@ class ApiClient {
         'password': password,
       }),
     );
-    if (_handleUnauthorized(r)) return 'Unauthorized - faça login novamente';
-    if (r.statusCode == 201 || r.statusCode == 200)
-      return 'Usuário criado com sucesso';
+    if (r.statusCode == 201 || r.statusCode == 200) return 'Usuário criado com sucesso';
     return 'Falha registrando: ${r.statusCode} ${r.body}';
   }
 
@@ -115,9 +62,7 @@ class ApiClient {
   }
 
   Future<String> history() async {
-    final r =
-        await http.get(Uri.parse('$baseUrl/history'), headers: _jsonHeaders);
-    if (_handleUnauthorized(r)) return 'Unauthorized - faça login novamente';
+    final r = await http.get(Uri.parse('$baseUrl/history'), headers: _jsonHeaders);
     if (r.statusCode == 200) {
       return r.body;
     }
@@ -131,15 +76,13 @@ class ApiClient {
       body: jsonEncode(item),
     );
 
-    if (_handleUnauthorized(r)) return 'Unauthorized - faça login novamente';
     if (r.statusCode == 201 || r.statusCode == 200) {
       return 'Item salvo';
     }
     return 'Falha add history: ${r.statusCode} ${r.body}';
   }
 
-  Future<String> download(String url, String mode, String audioFormat,
-      String audioQuality, String videoQuality) async {
+  Future<String> download(String url, String mode, String audioFormat, String audioQuality, String videoQuality) async {
     final r = await http.post(
       Uri.parse('$baseUrl/download'),
       headers: _jsonHeaders,
@@ -151,7 +94,6 @@ class ApiClient {
         'video_quality': videoQuality,
       }),
     );
-    if (_handleUnauthorized(r)) return 'Unauthorized - faça login novamente';
     if (r.statusCode == 200) {
       final data = jsonDecode(r.body);
       return data['task_id'] ?? 'download started';
@@ -160,9 +102,7 @@ class ApiClient {
   }
 
   Future<String> downloadProgress(String taskId) async {
-    final r = await http.get(Uri.parse('$baseUrl/download_progress/$taskId'),
-        headers: _jsonHeaders);
-    if (_handleUnauthorized(r)) return 'Unauthorized - faça login novamente';
+    final r = await http.get(Uri.parse('$baseUrl/download_progress/$taskId'), headers: _jsonHeaders);
     if (r.statusCode == 200) {
       return r.body;
     }
@@ -170,9 +110,7 @@ class ApiClient {
   }
 
   Future<String> cancelDownload(String taskId) async {
-    final r = await http.delete(Uri.parse('$baseUrl/download_task/$taskId'),
-        headers: _jsonHeaders);
-    if (_handleUnauthorized(r)) return 'Unauthorized - faça login novamente';
+    final r = await http.delete(Uri.parse('$baseUrl/download_task/$taskId'), headers: _jsonHeaders);
     if (r.statusCode == 200) {
       return r.body;
     }
@@ -185,7 +123,6 @@ class ApiClient {
       headers: _jsonHeaders,
       body: jsonEncode({'user_id': userId, 'fcm_token': fcmToken}),
     );
-    if (_handleUnauthorized(r)) return 'Unauthorized - faça login novamente';
     if (r.statusCode == 200) {
       return 'FCM token registrado';
     }
@@ -196,25 +133,12 @@ class ApiClient {
     final r = await http.post(
       Uri.parse('$baseUrl/fcm/send'),
       headers: _jsonHeaders,
-      body: jsonEncode(
-          {'user_id': userId, 'title': title, 'body': body, 'data': {}}),
+      body: jsonEncode({'user_id': userId, 'title': title, 'body': body, 'data': {}}),
     );
-    if (_handleUnauthorized(r)) return 'Unauthorized - faça login novamente';
     if (r.statusCode == 200) {
       return 'FCM send OK';
     }
     return 'Falha FCM send: ${r.statusCode} ${r.body}';
-  }
-
-  Future<Uint8List> downloadFile(String taskId) async {
-    final r = await http.get(Uri.parse('$baseUrl/download_file/$taskId'),
-        headers: _jsonHeaders);
-    if (_handleUnauthorized(r))
-      throw Exception('Unauthorized - faça login novamente');
-    if (r.statusCode == 200) {
-      return r.bodyBytes;
-    }
-    throw Exception('Falha download_file: ${r.statusCode} ${r.body}');
   }
 }
 
@@ -231,67 +155,12 @@ class _MyAppState extends State<MyApp> {
   final TextEditingController _password = TextEditingController();
   final TextEditingController _downloadUrl = TextEditingController();
   final TextEditingController _taskId = TextEditingController();
-  final ApiClient _api = ApiClient();
   String _downloadMode = 'audio';
   String _status = 'Pronto';
-  String _accessToken = '';
-  List<Map<String, dynamic>> _historyItems = [];
 
   Future<void> _setStatus(String s) async {
     setState(() {
       _status = s;
-    });
-  }
-
-  Future<void> _updateToken() async {
-    setState(() {
-      _accessToken = _api.token ?? '';
-    });
-  }
-
-  Future<void> _loadHistory() async {
-    try {
-      final response = await _api.history();
-      if (response.startsWith('Unauthorized')) {
-        await _setStatus(response);
-        return;
-      }
-      final parsed = jsonDecode(response);
-      if (parsed is List) {
-        setState(() {
-          _historyItems = List<Map<String, dynamic>>.from(parsed);
-        });
-      } else {
-        setState(() {
-          _historyItems = [];
-        });
-      }
-      await _setStatus('Histórico carregado: ${_historyItems.length} itens');
-    } catch (e) {
-      await _setStatus('Erro ao obter histórico: $e');
-    }
-  }
-
-  Future<void> _downloadFile(String taskId) async {
-    try {
-      final bytes = await _api.downloadFile(taskId);
-      final dir = await getApplicationDocumentsDirectory();
-      final outFile = File('${dir.path}/$taskId.media');
-      await outFile.writeAsBytes(bytes);
-      await NotificationService.show(
-          'Download concluído', 'Arquivo salvo em ${outFile.path}');
-      await _setStatus('Arquivo salvo em ${outFile.path}');
-    } catch (e) {
-      await _setStatus('Erro download_file: $e');
-    }
-  }
-
-  void _logout() {
-    _api.logout();
-    setState(() {
-      _accessToken = '';
-      _historyItems = [];
-      _status = 'Deslogado';
     });
   }
 
@@ -326,8 +195,10 @@ class _MyAppState extends State<MyApp> {
                     child: ElevatedButton(
                       onPressed: () async {
                         await _setStatus('Registrando...');
-                        final t = await _api.register(_username.text.trim(),
-                            _email.text.trim(), _password.text.trim());
+                        final t = await _api.register(
+                            _username.text.trim(),
+                            _email.text.trim(),
+                            _password.text.trim());
                         await _setStatus(t);
                       },
                       child: const Text('Registrar'),
@@ -341,11 +212,6 @@ class _MyAppState extends State<MyApp> {
                         final t = await _api.login(
                             _username.text.trim(), _password.text.trim());
                         await _setStatus(t);
-                        await _updateToken();
-                        if (t == 'Login OK') {
-                          await NotificationService.show(
-                              'Login', 'Autenticado com sucesso');
-                        }
                       },
                       child: const Text('Login'),
                     ),
@@ -365,7 +231,8 @@ class _MyAppState extends State<MyApp> {
               ElevatedButton(
                 onPressed: () async {
                   await _setStatus('Buscando /history ...');
-                  await _loadHistory();
+                  final t = await _api.history();
+                  await _setStatus(t);
                 },
                 child: const Text('GET /history'),
               ),
@@ -374,12 +241,11 @@ class _MyAppState extends State<MyApp> {
               const SizedBox(height: 12),
               TextField(
                 controller: _downloadUrl,
-                decoration:
-                    const InputDecoration(labelText: 'URL para download'),
+                decoration: const InputDecoration(labelText: 'URL para download'),
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                initialValue: _downloadMode,
+                value: _downloadMode,
                 items: const [
                   DropdownMenuItem(value: 'audio', child: Text('Audio')),
                   DropdownMenuItem(value: 'video', child: Text('Video')),
@@ -413,8 +279,7 @@ class _MyAppState extends State<MyApp> {
               const SizedBox(height: 8),
               TextField(
                 controller: _taskId,
-                decoration: const InputDecoration(
-                    labelText: 'Task ID para progress / cancel'),
+                decoration: const InputDecoration(labelText: 'Task ID para progress / cancel'),
               ),
               const SizedBox(height: 8),
               ElevatedButton(
@@ -442,50 +307,9 @@ class _MyAppState extends State<MyApp> {
                 },
                 child: const Text('DELETE /download_task'),
               ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () async {
-                  final id = _taskId.text.trim();
-                  if (id.isEmpty) {
-                    await _setStatus('Informe task id para download_file');
-                    return;
-                  }
-                  await _downloadFile(id);
-                },
-                child: const Text('GET /download_file'),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                  'Token: ${_accessToken.isNotEmpty ? _accessToken : 'não logado'}'),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: _logout,
-                child: const Text('Logout'),
-              ),
-              const SizedBox(height: 12),
-              if (_historyItems.isNotEmpty) ...[
-                const Text('Histórico',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 150,
-                  child: ListView.builder(
-                    itemCount: _historyItems.length,
-                    itemBuilder: (context, index) {
-                      final item = _historyItems[index];
-                      return ListTile(
-                        title:
-                            Text(item['title'] ?? item['url'] ?? 'Sem título'),
-                        subtitle: Text(item['url'] ?? ''),
-                        trailing: Text(item['timestamp'] ?? ''),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
               const SizedBox(height: 20),
               Text('Status: $_status', style: const TextStyle(fontSize: 16)),
+
             ],
           ),
         ),

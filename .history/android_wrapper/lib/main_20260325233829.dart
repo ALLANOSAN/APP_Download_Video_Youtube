@@ -95,8 +95,7 @@ class ApiClient {
       }),
     );
     if (_handleUnauthorized(r)) return 'Unauthorized - faça login novamente';
-    if (r.statusCode == 201 || r.statusCode == 200)
-      return 'Usuário criado com sucesso';
+    if (r.statusCode == 201 || r.statusCode == 200) return 'Usuário criado com sucesso';
     return 'Falha registrando: ${r.statusCode} ${r.body}';
   }
 
@@ -207,10 +206,8 @@ class ApiClient {
   }
 
   Future<Uint8List> downloadFile(String taskId) async {
-    final r = await http.get(Uri.parse('$baseUrl/download_file/$taskId'),
-        headers: _jsonHeaders);
-    if (_handleUnauthorized(r))
-      throw Exception('Unauthorized - faça login novamente');
+    final r = await http.get(Uri.parse('$baseUrl/download_file/$taskId'), headers: _jsonHeaders);
+    if (_handleUnauthorized(r)) throw Exception('Unauthorized - faça login novamente');
     if (r.statusCode == 200) {
       return r.bodyBytes;
     }
@@ -278,8 +275,7 @@ class _MyAppState extends State<MyApp> {
       final dir = await getApplicationDocumentsDirectory();
       final outFile = File('${dir.path}/$taskId.media');
       await outFile.writeAsBytes(bytes);
-      await NotificationService.show(
-          'Download concluído', 'Arquivo salvo em ${outFile.path}');
+      await NotificationService.show('Download concluído', 'Arquivo salvo em ${outFile.path}');
       await _setStatus('Arquivo salvo em ${outFile.path}');
     } catch (e) {
       await _setStatus('Erro download_file: $e');
@@ -343,8 +339,7 @@ class _MyAppState extends State<MyApp> {
                         await _setStatus(t);
                         await _updateToken();
                         if (t == 'Login OK') {
-                          await NotificationService.show(
-                              'Login', 'Autenticado com sucesso');
+                          await NotificationService.show('Login', 'Autenticado com sucesso');
                         }
                       },
                       child: const Text('Login'),
@@ -365,7 +360,8 @@ class _MyAppState extends State<MyApp> {
               ElevatedButton(
                 onPressed: () async {
                   await _setStatus('Buscando /history ...');
-                  await _loadHistory();
+                  final t = await _api.history();
+                  await _setStatus(t);
                 },
                 child: const Text('GET /history'),
               ),
@@ -379,7 +375,7 @@ class _MyAppState extends State<MyApp> {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                initialValue: _downloadMode,
+                value: _downloadMode,
                 items: const [
                   DropdownMenuItem(value: 'audio', child: Text('Audio')),
                   DropdownMenuItem(value: 'video', child: Text('Video')),
@@ -442,48 +438,6 @@ class _MyAppState extends State<MyApp> {
                 },
                 child: const Text('DELETE /download_task'),
               ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () async {
-                  final id = _taskId.text.trim();
-                  if (id.isEmpty) {
-                    await _setStatus('Informe task id para download_file');
-                    return;
-                  }
-                  await _downloadFile(id);
-                },
-                child: const Text('GET /download_file'),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                  'Token: ${_accessToken.isNotEmpty ? _accessToken : 'não logado'}'),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: _logout,
-                child: const Text('Logout'),
-              ),
-              const SizedBox(height: 12),
-              if (_historyItems.isNotEmpty) ...[
-                const Text('Histórico',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 150,
-                  child: ListView.builder(
-                    itemCount: _historyItems.length,
-                    itemBuilder: (context, index) {
-                      final item = _historyItems[index];
-                      return ListTile(
-                        title:
-                            Text(item['title'] ?? item['url'] ?? 'Sem título'),
-                        subtitle: Text(item['url'] ?? ''),
-                        trailing: Text(item['timestamp'] ?? ''),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
               const SizedBox(height: 20),
               Text('Status: $_status', style: const TextStyle(fontSize: 16)),
             ],
