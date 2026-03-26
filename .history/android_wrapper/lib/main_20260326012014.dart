@@ -161,6 +161,7 @@ class ApiClient {
       throw Exception('Falha no servidor: ${r.statusCode} ${r.body}');
     }
     final data = jsonDecode(r.body);
+    return data['task_id'] ?? throw Exception('Task ID não recebido');
     final taskId = data['task_id'];
     if (taskId == null) throw Exception('Task ID não recebido');
     return taskId.toString();
@@ -335,20 +336,20 @@ class _MyAppState extends State<MyApp> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          setState(() => _isLoading = true);
+                      setState(() => _isLoading = true);
                           await _setStatus('Registrando...');
-                          try {
-                            final t = await _api.register(
-                              _username.text.trim(),
-                              '',
-                              _password.text.trim(),
-                            );
-                            await _setStatus(t);
-                          } catch (e) {
-                            await _setStatus('Erro: $e');
-                          } finally {
-                            setState(() => _isLoading = false);
-                          }
+                      try {
+                        final t = await _api.register(
+                          _username.text.trim(),
+                          '',
+                          _password.text.trim(),
+                        );
+                        await _setStatus(t);
+                      } catch (e) {
+                        await _setStatus('Erro: $e');
+                      } finally {
+                        setState(() => _isLoading = false);
+                      }
                         },
                         child: const Text('Registrar'),
                       ),
@@ -357,25 +358,24 @@ class _MyAppState extends State<MyApp> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          setState(() => _isLoading = true);
+                        setState(() => _isLoading = true);
                           await _setStatus('Fazendo login...');
-                          try {
-                            final t = await _api.login(
-                                _username.text.trim(), _password.text.trim());
-                            await _setStatus(t);
-                            if (t == 'Login OK') {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Login realizado!')),
-                              );
-                              await NotificationService.show(
-                                  'Login', 'Autenticado com sucesso');
-                              await _loadHistory();
-                            }
-                          } catch (e) {
-                            await _setStatus('Erro: $e');
-                          } finally {
-                            setState(() => _isLoading = false);
+                        try {
+                          final t = await _api.login(
+                              _username.text.trim(), _password.text.trim());
+                          await _setStatus(t);
+                          if (t == 'Login OK') {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Login realizado!')),
+                            );
+                            await NotificationService.show(
+                                'Login', 'Autenticado com sucesso');
+                            await _loadHistory();
+                          }
+                        } catch (e) {
+                          await _setStatus('Erro: $e');
+                        } finally {
+                          setState(() => _isLoading = false);
                           }
                         },
                         child: const Text('Login'),
@@ -520,9 +520,7 @@ class _MyAppState extends State<MyApp> {
                         await _setStatus('Task criada: $t');
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text('Erro: $e'),
-                              backgroundColor: Colors.red),
+                          SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
                         );
                         await _setStatus('Erro de conexão: $e');
                       } finally {

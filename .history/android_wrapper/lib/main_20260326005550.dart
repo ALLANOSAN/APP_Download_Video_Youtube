@@ -139,41 +139,25 @@ class ApiClient {
     return 'Falha add history: ${r.statusCode} ${r.body}';
   }
 
-  Future<String> download({
-    required String url,
-    required String mode,
-    required String format,
-    required String quality,
-  }) async {
+  Future<String> download(String url, String mode, String audioFormat,
+      String audioQuality, String videoQuality) async {
     final r = await http.post(
       Uri.parse('$baseUrl/download'),
       headers: _jsonHeaders,
       body: jsonEncode({
         'url': url,
         'mode': mode,
-        'audio_format': mode == 'audio' ? format : 'mp3',
-        'audio_quality': mode == 'audio' ? quality : '192k',
-        'video_quality': mode == 'video' ? quality : '720p',
+        'audio_format': audioFormat,
+        'audio_quality': audioQuality,
+        'video_quality': videoQuality,
       }),
     );
     if (_handleUnauthorized(r)) return 'Unauthorized - faça login novamente';
-    if (r.statusCode != 200) {
-      throw Exception('Falha no servidor: ${r.statusCode} ${r.body}');
+    if (r.statusCode == 200) {
+      final data = jsonDecode(r.body);
+      return data['task_id'] ?? 'download started';
     }
-    final data = jsonDecode(r.body);
-    final taskId = data['task_id'];
-    if (taskId == null) throw Exception('Task ID não recebido');
-    return taskId.toString();
-  }
-
-  Future<Map<String, dynamic>?> getVideoInfo(String url) async {
-    try {
-      final r = await http.get(
-          Uri.parse('$baseUrl/video_info?url=${Uri.encodeComponent(url)}'),
-          headers: _jsonHeaders);
-      if (r.statusCode == 200) return jsonDecode(r.body);
-    } catch (_) {}
-    return null;
+    return 'Falha download: ${r.statusCode} ${r.body}';
   }
 
   Future<String> downloadProgress(String taskId) async {
@@ -253,7 +237,6 @@ class _MyAppState extends State<MyApp> {
   String _downloadQuality = '192k';
   String _status = 'Pronto';
   List<Map<String, dynamic>> _historyItems = [];
-  bool _isLoading = false;
 
   bool get _isLoggedIn => _api.isAuthenticated;
 
@@ -335,20 +318,13 @@ class _MyAppState extends State<MyApp> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          setState(() => _isLoading = true);
                           await _setStatus('Registrando...');
-                          try {
-                            final t = await _api.register(
-                              _username.text.trim(),
-                              '',
-                              _password.text.trim(),
-                            );
-                            await _setStatus(t);
-                          } catch (e) {
-                            await _setStatus('Erro: $e');
-                          } finally {
-                            setState(() => _isLoading = false);
-                          }
+                          final t = await _api.register(
+                            _username.text.trim(),
+                            '',
+                            _password.text.trim(),
+                          );
+                          await _setStatus(t);
                         },
                         child: const Text('Registrar'),
                       ),
@@ -357,25 +333,15 @@ class _MyAppState extends State<MyApp> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          setState(() => _isLoading = true);
                           await _setStatus('Fazendo login...');
-                          try {
-                            final t = await _api.login(
-                                _username.text.trim(), _password.text.trim());
-                            await _setStatus(t);
-                            if (t == 'Login OK') {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Login realizado!')),
-                              );
-                              await NotificationService.show(
-                                  'Login', 'Autenticado com sucesso');
-                              await _loadHistory();
-                            }
-                          } catch (e) {
-                            await _setStatus('Erro: $e');
-                          } finally {
-                            setState(() => _isLoading = false);
+                          final t = await _api.login(
+                              _username.text.trim(), _password.text.trim());
+                          await _setStatus(t);
+                          if (t == 'Login OK') {
+                            await NotificationService.show(
+                                'Login', 'Autenticado com sucesso');
+                            await _loadHistory();
+                            setState(() {});
                           }
                         },
                         child: const Text('Login'),
@@ -385,8 +351,6 @@ class _MyAppState extends State<MyApp> {
                 ),
 
                 const SizedBox(height: 24),
-                if (_isLoading)
-                  const Center(child: CircularProgressIndicator()),
 
                 if (_isLoggedIn) ...[
                   const Divider(),
@@ -489,45 +453,35 @@ class _MyAppState extends State<MyApp> {
                   const SizedBox(height: 14),
                   ElevatedButton(
                     onPressed: () async {
-                      setState(() => _isLoading = true);
                       final url = _downloadUrl.text.trim();
                       if (url.isEmpty) {
                         await _setStatus('Informe a URL para download');
                         return;
                       }
+                      await _setStatus('Iniciando download...');
 
-                      try {
-                        await _setStatus('Obtendo informações...');
-                        final info = await _api.getVideoInfo(url);
-                        final title = info?['title'] ?? 'Vídeo/Áudio';
+                      final audioFormat =
+                          _downloadMode == 'audio' ? _downloadFormat : 'mp3';
+                      final audioQuality =
+                          _downloadMode == 'audio' ? _downloadQuality : '192k';
+                      final videoQuality =
+                          _downloadMode == 'video' ? _downloadQuality : '720p';
 
-                        await NotificationService.show(
-                          'Download Iniciado',
-                          'Baixando: $title',
-                        );
+                      final t = await _api.download(
+                        url,
+                        _downloadMode,
+                        audioFormat,
+                        audioQuality,
+                        videoQuality,
+                        _downloadMode == 'audio' ? _downloadFormat : 'mp3',
+                        _downloadMode == 'audio' ? _downloadQuality : '192k',
+                        _downloadMode == 'video' ? _downloadQuality : '720p',
+                      );
 
-                        await _setStatus('Iniciando download...');
-                        final t = await _api.download(
-                          url: url,
-                          mode: _downloadMode,
-                          format: _downloadFormat,
-                          quality: _downloadQuality,
-                        );
-
-                        setState(() {
-                          _taskId.text = t;
-                        });
-                        await _setStatus('Task criada: $t');
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text('Erro: $e'),
-                              backgroundColor: Colors.red),
-                        );
-                        await _setStatus('Erro de conexão: $e');
-                      } finally {
-                        setState(() => _isLoading = false);
-                      }
+                      setState(() {
+                        _taskId.text = t;
+                      });
+                      await _setStatus('Task criada: $t');
                     },
                     child: const Text('Iniciar Download'),
                   ),
