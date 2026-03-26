@@ -24,6 +24,7 @@ def resolve_binary(name: str, env_var: str) -> Path:
     if env_path:
         candidates.append(Path(env_path))
 
+    # Usa binários já empacotados no projeto (root/binaries)
     # 1. Tenta o PATH do sistema (Prioridade máxima no Docker/Fly.io)
     system_path = shutil.which(name)
     if system_path:
@@ -33,11 +34,18 @@ def resolve_binary(name: str, env_var: str) -> Path:
     root = Path(__file__).resolve().parents[2]
     candidates.append(root / "binaries" / name)
 
+    # Caminho relativo em src (quando se executa de mobile/main_flet.py)
     # 3. Caminho relativo em src
     candidates.append(Path(__file__).resolve().parents[1] / "binaries" / name)
 
+    # Caminho de trabalho atual
     # 4. Caminho de trabalho atual
     candidates.append(Path.cwd() / "binaries" / name)
+
+    # Caminhos do system PATH
+    system_path = shutil.which(name)
+    if system_path:
+        candidates.append(Path(system_path))
 
     for candidate in candidates:
         if candidate and candidate.exists() and candidate.is_file():
