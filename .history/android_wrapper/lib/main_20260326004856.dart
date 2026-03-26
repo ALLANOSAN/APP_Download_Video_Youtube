@@ -291,8 +291,7 @@ class _MyAppState extends State<MyApp> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Backend: $backendUrl',
-                    style: const TextStyle(fontSize: 14)),
+                Text('Backend: $backendUrl', style: const TextStyle(fontSize: 14)),
                 const SizedBox(height: 24),
 
                 // Login / Register section
@@ -338,8 +337,7 @@ class _MyAppState extends State<MyApp> {
                               _username.text.trim(), _password.text.trim());
                           await _setStatus(t);
                           if (t == 'Login OK') {
-                            await NotificationService.show(
-                                'Login', 'Autenticado com sucesso');
+                            await NotificationService.show('Login', 'Autenticado com sucesso');
                             await _loadHistory();
                             setState(() {});
                           }
@@ -356,8 +354,7 @@ class _MyAppState extends State<MyApp> {
                   const Divider(),
                   const SizedBox(height: 16),
                   const Text('Download de vídeo/audio',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   TextField(
                     controller: _downloadUrl,
@@ -368,7 +365,7 @@ class _MyAppState extends State<MyApp> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    initialValue: _downloadMode,
+                    value: _downloadMode,
                     items: const [
                       DropdownMenuItem(value: 'audio', child: Text('Áudio')),
                       DropdownMenuItem(value: 'video', child: Text('Vídeo')),
@@ -389,66 +386,49 @@ class _MyAppState extends State<MyApp> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    initialValue: _downloadFormat,
+                    value: _downloadFormat,
                     items: _downloadMode == 'audio'
                         ? const [
                             DropdownMenuItem(value: 'mp3', child: Text('MP3')),
                             DropdownMenuItem(value: 'm4a', child: Text('M4A')),
                             DropdownMenuItem(value: 'wav', child: Text('WAV')),
-                            DropdownMenuItem(
-                                value: 'flac', child: Text('FLAC')),
-                            DropdownMenuItem(
-                                value: 'opus', child: Text('OPUS')),
+                            DropdownMenuItem(value: 'flac', child: Text('FLAC')),
+                            DropdownMenuItem(value: 'opus', child: Text('OPUS')),
                             DropdownMenuItem(value: 'aac', child: Text('AAC')),
                             DropdownMenuItem(value: 'ogg', child: Text('OGG')),
                           ]
                         : const [
                             DropdownMenuItem(value: 'mp4', child: Text('MP4')),
                             DropdownMenuItem(value: 'mkv', child: Text('MKV')),
-                            DropdownMenuItem(
-                                value: 'webm', child: Text('WEBM')),
+                            DropdownMenuItem(value: 'webm', child: Text('WEBM')),
                           ],
                     onChanged: (value) {
-                      if (value != null)
-                        setState(() => _downloadFormat = value);
+                      if (value != null) setState(() => _downloadFormat = value);
                     },
-                    decoration: const InputDecoration(
-                        labelText: 'Formato', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(labelText: 'Formato', border: OutlineInputBorder()),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    initialValue: _downloadQuality,
+                    value: _downloadQuality,
                     items: _downloadMode == 'audio'
                         ? const [
-                            DropdownMenuItem(
-                                value: '128k', child: Text('128k')),
-                            DropdownMenuItem(
-                                value: '192k', child: Text('192k')),
-                            DropdownMenuItem(
-                                value: '256k', child: Text('256k')),
-                            DropdownMenuItem(
-                                value: '320k', child: Text('320k')),
+                            DropdownMenuItem(value: '128k', child: Text('128k')),
+                            DropdownMenuItem(value: '192k', child: Text('192k')),
+                            DropdownMenuItem(value: '256k', child: Text('256k')),
+                            DropdownMenuItem(value: '320k', child: Text('320k')),
                           ]
                         : const [
-                            DropdownMenuItem(
-                                value: '360p', child: Text('360p')),
-                            DropdownMenuItem(
-                                value: '480p', child: Text('480p')),
-                            DropdownMenuItem(
-                                value: '720p', child: Text('720p')),
-                            DropdownMenuItem(
-                                value: '1080p', child: Text('1080p')),
-                            DropdownMenuItem(
-                                value: '1440p', child: Text('1440p')),
-                            DropdownMenuItem(
-                                value: '2160p', child: Text('2160p')),
+                            DropdownMenuItem(value: '360p', child: Text('360p')),
+                            DropdownMenuItem(value: '480p', child: Text('480p')),
+                            DropdownMenuItem(value: '720p', child: Text('720p')),
+                            DropdownMenuItem(value: '1080p', child: Text('1080p')),
+                            DropdownMenuItem(value: '1440p', child: Text('1440p')),
+                            DropdownMenuItem(value: '2160p', child: Text('2160p')),
                           ],
                     onChanged: (value) {
-                      if (value != null)
-                        setState(() => _downloadQuality = value);
+                      if (value != null) setState(() => _downloadQuality = value);
                     },
-                    decoration: const InputDecoration(
-                        labelText: 'Qualidade', border: OutlineInputBorder()),
+                    decoration: const InputDecoration(labelText: 'Qualidade', border: OutlineInputBorder()),
                   ),
                   const SizedBox(height: 14),
                   ElevatedButton(
@@ -460,12 +440,9 @@ class _MyAppState extends State<MyApp> {
                       }
                       await _setStatus('Iniciando download...');
 
-                      final audioFormat =
-                          _downloadMode == 'audio' ? _downloadFormat : 'mp3';
-                      final audioQuality =
-                          _downloadMode == 'audio' ? _downloadQuality : '192k';
-                      final videoQuality =
-                          _downloadMode == 'video' ? _downloadQuality : '720p';
+                      final audioFormat = _downloadMode == 'audio' ? _downloadFormat : 'mp3';
+                      final audioQuality = _downloadMode == 'audio' ? _downloadQuality : '192k';
+                      final videoQuality = _downloadMode == 'video' ? _downloadQuality : '720p';
 
                       final t = await _api.download(
                         url,
@@ -527,8 +504,7 @@ class _MyAppState extends State<MyApp> {
                   const SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: _logout,
-                    style:
-                        ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                     child: const Text('Logout'),
                   ),
                   if (_historyItems.isNotEmpty) ...[
@@ -560,5 +536,3 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
     );
-  }
-}
