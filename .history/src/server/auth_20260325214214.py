@@ -1,17 +1,11 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-import os
 from jose import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
 # Configurações de segurança
-SECRET_KEY = os.getenv("SECRET_KEY", "ANTIGRAVITY_SYNC_SECRET_KEY")
-if SECRET_KEY == "ANTIGRAVITY_SYNC_SECRET_KEY":
-    # WARNING: Use environment variable SECRET_KEY in production.
-    # This fallback is only for local/dev convenience.
-    print("[WARNING] SECRET_KEY está no valor padrão; defina SECRET_KEY no ambiente para produção.")
-
+SECRET_KEY = "ANTIGRAVITY_SYNC_SECRET_KEY"  # Em produção, use env var
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 semana
 
