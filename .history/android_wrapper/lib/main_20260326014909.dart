@@ -487,59 +487,57 @@ class _MyAppState extends State<MyApp> {
                         labelText: 'Qualidade', border: OutlineInputBorder()),
                   ),
                   const SizedBox(height: 14),
-                  if (!_isLoading)
-                    ElevatedButton(
-                      onPressed: () async {
-                        setState(() => _isLoading = true);
-                        final url = _downloadUrl.text.trim();
-                        if (url.isEmpty) {
-                          await _setStatus('Informe a URL para download');
-                          return;
-                        }
+                  ElevatedButton(
+                  if (!_isLoading) ElevatedButton(
+                    onPressed: () async {
+                      setState(() => _isLoading = true);
+                      final url = _downloadUrl.text.trim();
+                      if (url.isEmpty) {
+                        await _setStatus('Informe a URL para download');
+                        return;
+                      }
 
-                        try {
-                          await _setStatus('Obtendo informações...');
-                          final info = await _api.getVideoInfo(url);
-                          final title = info?['title'] ?? 'Vídeo/Áudio';
+                      try {
+                        await _setStatus('Obtendo informações...');
+                        final info = await _api.getVideoInfo(url);
+                        final title = info?['title'] ?? 'Vídeo/Áudio';
 
-                          await NotificationService.show(
-                            'Download Iniciado',
-                            'Baixando: $title',
-                          );
+                        await NotificationService.show(
+                          'Download Iniciado',
+                          'Baixando: $title',
+                        );
 
-                          await _setStatus('Iniciando download...');
-                          final t = await _api.download(
-                            url: url,
-                            mode: _downloadMode,
-                            format: _downloadFormat,
-                            quality: _downloadQuality,
-                          );
+                        await _setStatus('Iniciando download...');
+                        final t = await _api.download(
+                          url: url,
+                          mode: _downloadMode,
+                          format: _downloadFormat,
+                          quality: _downloadQuality,
+                        );
 
-                          setState(() {
-                            _taskId.text = t;
-                          });
-                          await _setStatus(
-                              'Download processando no servidor...');
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text('Erro: $e'),
-                                backgroundColor: Colors.red),
-                          );
-                          await _setStatus('Erro de conexão: $e');
-                        } finally {
-                          setState(() => _isLoading = false);
-                        }
-                      },
-                      child: const Text('Iniciar Download'),
-                    )
-                  else
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: CircularProgressIndicator(),
-                      ),
+                        setState(() {
+                          _taskId.text = t;
+                        });
+                        await _setStatus('Task criada: $t');
+                        await _setStatus('Download processando no servidor...');
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text('Erro: $e'),
+                              backgroundColor: Colors.red),
+                        );
+                        await _setStatus('Erro de conexão: $e');
+                      } finally {
+                        setState(() => _isLoading = false);
+                      }
+                    },
+                    child: const Text('Iniciar Download'),
+                  ) else const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: CircularProgressIndicator(),
                     ),
+                  ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: _taskId,

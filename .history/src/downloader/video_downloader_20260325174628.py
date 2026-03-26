@@ -24,6 +24,11 @@ def resolve_binary(name: str, env_var: str) -> Path:
     if env_path:
         candidates.append(Path(env_path))
 
+    # No Docker/Linux, shutil.which é a forma mais confiável de achar binários do sistema
+    system_path = shutil.which(name)
+    if system_path:
+        return Path(system_path)
+
     # Usa binários já empacotados no projeto (root/binaries)
     root = Path(__file__).resolve().parents[2]
     candidates.append(root / "binaries" / name)
@@ -33,11 +38,6 @@ def resolve_binary(name: str, env_var: str) -> Path:
 
     # Caminho de trabalho atual
     candidates.append(Path.cwd() / "binaries" / name)
-
-    # Caminhos do system PATH
-    system_path = shutil.which(name)
-    if system_path:
-        candidates.append(Path(system_path))
 
     for candidate in candidates:
         if candidate and candidate.exists() and candidate.is_file():
