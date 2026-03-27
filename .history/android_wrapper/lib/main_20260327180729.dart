@@ -709,6 +709,7 @@ class _MyAppState extends State<MyApp> {
                               );
                               await _setStatus('Erro de conexão: $e');
                             } finally {
+                              if (!mounted) return;
                               if (mounted) {
                                 setState(() => _isLoading = false);
                               }

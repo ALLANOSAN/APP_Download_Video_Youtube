@@ -66,6 +66,8 @@ class ApiClient {
         'password': password,
       }),
     );
+    if (_handleUnauthorized(r)) return 'Unauthorized - faça login novamente';
+    if (r.statusCode == 201 || r.statusCode == 200)
     if (_handleUnauthorized(r)) {
       return 'Unauthorized - faça login novamente';
     }
@@ -163,6 +165,7 @@ class ApiClient {
   Future<Uint8List> downloadFileFromServer(String taskId) async {
     final r = await http.get(Uri.parse('$baseUrl/download_file/$taskId'),
         headers: _jsonHeaders);
+    if (_handleUnauthorized(r))
     if (_handleUnauthorized(r)) {
       throw Exception('Unauthorized - faça login novamente');
     }
@@ -212,6 +215,7 @@ class ApiClient {
   Future<Uint8List> downloadFile(String taskId) async {
     final r = await http.get(Uri.parse('$baseUrl/download_file/$taskId'),
         headers: _jsonHeaders);
+    if (_handleUnauthorized(r))
     if (_handleUnauthorized(r)) {
       throw Exception('Unauthorized - faça login novamente');
     }
@@ -364,6 +368,8 @@ class _MyAppState extends State<MyApp> {
       await _setStatus('Erro download local: $e');
     } finally {
       yt.close();
+      if (!mounted) return;
+      setState(() => _isLoading = false);
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -389,6 +395,7 @@ class _MyAppState extends State<MyApp> {
           return false; // Para o loop
         }
         if (res.toLowerCase().contains('erro') ||
+            res.toLowerCase().contains('fail')) return false;
             res.toLowerCase().contains('fail')) {
           return false;
         }
@@ -446,6 +453,8 @@ class _MyAppState extends State<MyApp> {
       );
       await _setStatus('Erro ao salvar no celular: $e');
     } finally {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -515,6 +524,8 @@ class _MyAppState extends State<MyApp> {
                           } catch (e) {
                             await _setStatus('Erro: $e');
                           } finally {
+                            if (!mounted) return;
+                            setState(() => _isLoading = false);
                             if (mounted) {
                               setState(() => _isLoading = false);
                             }
@@ -544,9 +555,8 @@ class _MyAppState extends State<MyApp> {
                           } catch (e) {
                             await _setStatus('Erro: $e');
                           } finally {
-                            if (mounted) {
-                              setState(() => _isLoading = false);
-                            }
+                            if (!mounted) return;
+                            setState(() => _isLoading = false);
                           }
                         },
                         child: const Text('Login'),
@@ -616,6 +626,7 @@ class _MyAppState extends State<MyApp> {
                                 value: 'webm', child: Text('WEBM')),
                           ],
                     onChanged: (value) {
+                      if (value != null)
                       if (value != null) {
                         setState(() => _downloadFormat = value);
                       }
@@ -652,6 +663,7 @@ class _MyAppState extends State<MyApp> {
                                 value: '2160p', child: Text('2160p')),
                           ],
                     onChanged: (value) {
+                      if (value != null)
                       if (value != null) {
                         setState(() => _downloadQuality = value);
                       }
@@ -709,6 +721,8 @@ class _MyAppState extends State<MyApp> {
                               );
                               await _setStatus('Erro de conexão: $e');
                             } finally {
+                              if (!mounted) return;
+                              setState(() => _isLoading = false);
                               if (mounted) {
                                 setState(() => _isLoading = false);
                               }
