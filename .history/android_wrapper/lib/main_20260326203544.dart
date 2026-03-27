@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
@@ -9,8 +10,40 @@ import 'package:http/http.dart' as http;
 
 const String backendUrl = 'https://app-download-video-youtube.fly.dev';
 
+class NotificationService {
+  static final _localNotifications = FlutterLocalNotificationsPlugin();
+
+  static Future<void> init() async {
+    const settings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    await _localNotifications.initialize(
+      settings: const InitializationSettings(android: settings),
+      onDidReceiveNotificationResponse: (response) {
+        // Opcional: lidar com ação de notificação quando o usuário clica.
+      },
+    );
+  }
+
+  static Future<void> show(String title, String body) async {
+    const androidDetails = AndroidNotificationDetails(
+      'channel_id',
+      'Notifications',
+      channelDescription: 'App notifications',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    await _localNotifications.show(
+      id: 0,
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(android: androidDetails),
+      payload: '',
+    );
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.init();
   runApp(const MyApp());
 }
 
@@ -160,8 +193,7 @@ class ApiClient {
   Future<Uint8List> downloadFileFromServer(String taskId) async {
     final r = await http.get(Uri.parse('$baseUrl/download_file/$taskId'),
         headers: _jsonHeaders);
-    if (_handleUnauthorized(r))
-      throw Exception('Unauthorized - faça login novamente');
+    if (_handleUnauthorized(r)) throw Exception('Unauthorized - faça login novamente');
     if (r.statusCode == 200) {
       return r.bodyBytes;
     }
@@ -225,8 +257,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
-      GlobalKey<ScaffoldMessengerState>();
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final TextEditingController _username = TextEditingController();
   final TextEditingController _password = TextEditingController();
   final TextEditingController _downloadUrl = TextEditingController();
@@ -310,8 +341,7 @@ class _MyAppState extends State<MyApp> {
           throw Exception('Nenhum stream de áudio disponível');
         }
 
-        final qualityInt =
-            int.tryParse(_downloadQuality.replaceAll('k', '')) ?? 192;
+        final qualityInt = int.tryParse(_downloadQuality.replaceAll('k', '')) ?? 192;
         final chosen = allAudio
             .where((s) => s.bitrate.kiloBitsPerSecond <= qualityInt)
             .toList();
@@ -322,10 +352,8 @@ class _MyAppState extends State<MyApp> {
           throw Exception('Nenhum stream de vídeo disponível');
         }
 
-        final desiredHeight =
-            int.tryParse(_downloadQuality.replaceAll('p', '')) ?? 720;
         final chosen = allVideo.firstWhere(
-          (s) => s.videoResolution.height == desiredHeight,
+          (s) => s.videoQuality.label == _downloadQuality,
           orElse: () => allVideo.last,
         );
         streamInfo = chosen;
@@ -352,13 +380,11 @@ class _MyAppState extends State<MyApp> {
       );
     } catch (e) {
       _scaffoldMessengerKey.currentState?.showSnackBar(
-        SnackBar(
-            content: Text('Erro download local: $e'),
-            backgroundColor: Colors.red),
+        SnackBar(content: Text('Erro download local: $e'), backgroundColor: Colors.red),
       );
       await _setStatus('Erro download local: $e');
     } finally {
-      yt.close();
+      await yt.close();
       if (!mounted) return;
       setState(() => _isLoading = false);
     }
@@ -377,9 +403,8 @@ class _MyAppState extends State<MyApp> {
         if (res.toLowerCase().contains('concluído') ||
             res.toLowerCase().contains('finished') ||
             res.toLowerCase().contains('100%')) {
-          _scaffoldMessengerKey.currentState?.showSnackBar(
-            const SnackBar(content: Text('Download concluído no servidor!')),
-          );
+          await NotificationService.show(
+              'Sucesso', 'Download concluído no servidor!');
           return false; // Para o loop
         }
         if (res.toLowerCase().contains('erro') ||
@@ -417,12 +442,10 @@ class _MyAppState extends State<MyApp> {
       await outputDir.create(recursive: true);
 
       final originalFilePath = progressJson['file']?.toString();
-      final extension =
-          originalFilePath != null && originalFilePath.contains('.')
-              ? originalFilePath.split('.').last
-              : 'dat';
-      final fileName =
-          'youtube_${DateTime.now().millisecondsSinceEpoch}.$extension';
+      final extension = originalFilePath != null && originalFilePath.contains('.')
+          ? originalFilePath.split('.').last
+          : 'dat';
+      final fileName = 'youtube_${DateTime.now().millisecondsSinceEpoch}.$extension';
       final savedFile = File('${outputDir.path}/$fileName');
       await savedFile.writeAsBytes(fileBytes);
 
@@ -432,9 +455,7 @@ class _MyAppState extends State<MyApp> {
       );
     } catch (e) {
       _scaffoldMessengerKey.currentState?.showSnackBar(
-        SnackBar(
-            content: Text('Erro ao salvar no celular: $e'),
-            backgroundColor: Colors.red),
+        SnackBar(content: Text('Erro ao salvar no celular: $e'), backgroundColor: Colors.red),
       );
       await _setStatus('Erro ao salvar no celular: $e');
     } finally {
@@ -529,6 +550,8 @@ class _MyAppState extends State<MyApp> {
                                 const SnackBar(
                                     content: Text('Login realizado!')),
                               );
+                              await NotificationService.show(
+                                  'Login', 'Autenticado com sucesso');
                               await _loadHistory();
                             }
                           } catch (e) {
@@ -648,67 +671,60 @@ class _MyAppState extends State<MyApp> {
                   ),
                   const SizedBox(height: 14),
                   if (!_isLoading)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () async {
-                            if (!mounted) return;
-                            setState(() => _isLoading = true);
-                            final url = _downloadUrl.text.trim();
-                            if (url.isEmpty) {
-                              await _setStatus('Informe a URL para download');
-                              if (!mounted) return;
-                              setState(() => _isLoading = false);
-                              return;
-                            }
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (!mounted) return;
+                        setState(() => _isLoading = true);
+                        final url = _downloadUrl.text.trim();
+                        if (url.isEmpty) {
+                          await _setStatus('Informe a URL para download');
+                          if (!mounted) return;
+                          setState(() => _isLoading = false);
+                          return;
+                        }
 
-                            try {
-                              await _setStatus('Obtendo informações...');
-                              final info = await _api.getVideoInfo(url);
-                              final title = info?['title'] ?? 'Vídeo/Áudio';
+                        try {
+                          await _setStatus('Obtendo informações...');
+                          final info = await _api.getVideoInfo(url);
+                          final title = info?['title'] ?? 'Vídeo/Áudio';
 
-                              await _setStatus(
-                                  'Iniciando download de "$title"...');
-                              final t = await _api.download(
-                                url: url,
-                                mode: _downloadMode,
-                                format: _downloadFormat,
-                                quality: _downloadQuality,
-                              );
+                          await NotificationService.show(
+                            'Download Iniciado',
+                            'Baixando: $title',
+                          );
 
-                              setState(() {
-                                _taskId.text = t;
-                              });
-                              await _setStatus(
-                                  'Processando... acompanhando progresso...');
-                              _startPolling(t);
-                              _scaffoldMessengerKey.currentState?.showSnackBar(
-                                const SnackBar(
-                                    content:
-                                        Text('Download iniciado no servidor!')),
-                              );
-                            } catch (e) {
-                              _scaffoldMessengerKey.currentState?.showSnackBar(
-                                SnackBar(
-                                    content: Text('Erro: $e'),
-                                    backgroundColor: Colors.red),
-                              );
-                              await _setStatus('Erro de conexão: $e');
-                            } finally {
-                              if (!mounted) return;
-                              setState(() => _isLoading = false);
-                            }
-                          },
-                          child: const Text('Iniciar Download (Servidor)'),
-                        ),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                          onPressed: _downloadDirectToDevice,
-                          child: const Text(
-                              'Download direto (celular tipo Snaptube)'),
-                        ),
-                      ],
+                          await _setStatus('Iniciando download...');
+                          final t = await _api.download(
+                            url: url,
+                            mode: _downloadMode,
+                            format: _downloadFormat,
+                            quality: _downloadQuality,
+                          );
+
+                          setState(() {
+                            _taskId.text = t;
+                          });
+                          await _setStatus(
+                              'Processando... acompanhando progresso...');
+                          _startPolling(t);
+                          _scaffoldMessengerKey.currentState?.showSnackBar(
+                            const SnackBar(
+                                content:
+                                    Text('Download iniciado no servidor!')),
+                          );
+                        } catch (e) {
+                          _scaffoldMessengerKey.currentState?.showSnackBar(
+                            SnackBar(
+                                content: Text('Erro: $e'),
+                                backgroundColor: Colors.red),
+                          );
+                          await _setStatus('Erro de conexão: $e');
+                        } finally {
+                          if (!mounted) return;
+                          setState(() => _isLoading = false);
+                        }
+                      },
+                      child: const Text('Iniciar Download'),
                     )
                   else
                     const Center(

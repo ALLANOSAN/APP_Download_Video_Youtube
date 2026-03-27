@@ -1,0 +1,6 @@
+# Configuração do ty linter
+[tool.ty]
+ python-version = "3.14"
+ venv-path = ".venv"
+
+[rules]

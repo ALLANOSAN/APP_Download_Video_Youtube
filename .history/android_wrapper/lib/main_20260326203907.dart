@@ -325,7 +325,7 @@ class _MyAppState extends State<MyApp> {
         final desiredHeight =
             int.tryParse(_downloadQuality.replaceAll('p', '')) ?? 720;
         final chosen = allVideo.firstWhere(
-          (s) => s.videoResolution.height == desiredHeight,
+          (s) => s.videoQuality.height == desiredHeight,
           orElse: () => allVideo.last,
         );
         streamInfo = chosen;
@@ -668,8 +668,7 @@ class _MyAppState extends State<MyApp> {
                               final info = await _api.getVideoInfo(url);
                               final title = info?['title'] ?? 'Vídeo/Áudio';
 
-                              await _setStatus(
-                                  'Iniciando download de "$title"...');
+                              await _setStatus('Iniciando download...');
                               final t = await _api.download(
                                 url: url,
                                 mode: _downloadMode,

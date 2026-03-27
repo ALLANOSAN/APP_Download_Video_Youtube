@@ -33,6 +33,8 @@ typeCheckingMode = "off"
 python-version = "3.12"
 extra-paths = ["src", "."]
 
+[tool.ty.rules]
+ignore = ["unresolved-import"]
 
 [tool.ruff]
 line-length = 100

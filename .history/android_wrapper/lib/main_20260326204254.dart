@@ -325,7 +325,7 @@ class _MyAppState extends State<MyApp> {
         final desiredHeight =
             int.tryParse(_downloadQuality.replaceAll('p', '')) ?? 720;
         final chosen = allVideo.firstWhere(
-          (s) => s.videoResolution.height == desiredHeight,
+          (s) => s.videoQuality.height == desiredHeight,
           orElse: () => allVideo.last,
         );
         streamInfo = chosen;

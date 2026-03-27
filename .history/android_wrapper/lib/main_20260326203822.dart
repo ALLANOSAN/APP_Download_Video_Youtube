@@ -322,10 +322,8 @@ class _MyAppState extends State<MyApp> {
           throw Exception('Nenhum stream de vídeo disponível');
         }
 
-        final desiredHeight =
-            int.tryParse(_downloadQuality.replaceAll('p', '')) ?? 720;
         final chosen = allVideo.firstWhere(
-          (s) => s.videoResolution.height == desiredHeight,
+          (s) => s.videoQuality.label == _downloadQuality,
           orElse: () => allVideo.last,
         );
         streamInfo = chosen;
@@ -358,7 +356,7 @@ class _MyAppState extends State<MyApp> {
       );
       await _setStatus('Erro download local: $e');
     } finally {
-      yt.close();
+      await yt.close();
       if (!mounted) return;
       setState(() => _isLoading = false);
     }
@@ -668,8 +666,7 @@ class _MyAppState extends State<MyApp> {
                               final info = await _api.getVideoInfo(url);
                               final title = info?['title'] ?? 'Vídeo/Áudio';
 
-                              await _setStatus(
-                                  'Iniciando download de "$title"...');
+                              await _setStatus('Iniciando download...');
                               final t = await _api.download(
                                 url: url,
                                 mode: _downloadMode,

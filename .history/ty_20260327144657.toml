@@ -1,7 +1,7 @@
 # Configuração do ty linter
-[environment]
-extra-paths = ["src", "."]
-python-version = "3.14"
+[tool.ty.environment]
+ python-version = "3.12"
+ venv-path = ".venv"
 
 [rules]
 ignore = ["unresolved-import"]

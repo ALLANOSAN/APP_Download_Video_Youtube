@@ -1,16 +1,45 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 
 const String backendUrl = 'https://app-download-video-youtube.fly.dev';
 
+class NotificationService {
+  static final _localNotifications = FlutterLocalNotificationsPlugin();
+
+  static Future<void> init() async {
+    const settings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    await _localNotifications.initialize(
+      settings: const InitializationSettings(android: settings),
+      onDidReceiveNotificationResponse: (response) {
+        // Opcional: lidar com ação de notificação quando o usuário clica.
+      },
+    );
+  }
+
+  static Future<void> show(String title, String body) async {
+    const androidDetails = AndroidNotificationDetails(
+      'channel_id',
+      'Notifications',
+      channelDescription: 'App notifications',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    await _localNotifications.show(
+      id: 0,
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(android: androidDetails),
+      payload: '',
+    );
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.init();
   runApp(const MyApp());
 }
 
@@ -157,17 +186,6 @@ class ApiClient {
     return 'Falha progress: ${r.statusCode} ${r.body}';
   }
 
-  Future<Uint8List> downloadFileFromServer(String taskId) async {
-    final r = await http.get(Uri.parse('$baseUrl/download_file/$taskId'),
-        headers: _jsonHeaders);
-    if (_handleUnauthorized(r))
-      throw Exception('Unauthorized - faça login novamente');
-    if (r.statusCode == 200) {
-      return r.bodyBytes;
-    }
-    throw Exception('Falha download_file: ${r.statusCode} ${r.body}');
-  }
-
   Future<String> cancelDownload(String taskId) async {
     final r = await http.delete(Uri.parse('$baseUrl/download_task/$taskId'),
         headers: _jsonHeaders);
@@ -225,8 +243,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
-      GlobalKey<ScaffoldMessengerState>();
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   final TextEditingController _username = TextEditingController();
   final TextEditingController _password = TextEditingController();
   final TextEditingController _downloadUrl = TextEditingController();
@@ -272,98 +289,6 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  String _sanitizeFileName(String input) {
-    final sanitized = input
-        .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-    return sanitized.isEmpty ? 'download' : sanitized;
-  }
-
-  Future<void> _downloadDirectToDevice() async {
-    final url = _downloadUrl.text.trim();
-    if (url.isEmpty) {
-      await _setStatus('Informe URL do YouTube para download local');
-      return;
-    }
-
-    if (!await Permission.storage.request().isGranted) {
-      await _setStatus('Permissão de armazenamento necessária');
-      return;
-    }
-
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-
-    final yt = YoutubeExplode();
-
-    try {
-      await _setStatus('Carregando vídeo...');
-      final video = await yt.videos.get(url);
-      await _setStatus('Preparando streams...');
-
-      final manifest = await yt.videos.streamsClient.getManifest(video.id);
-      StreamInfo streamInfo;
-      if (_downloadMode == 'audio') {
-        final allAudio = manifest.audioOnly.toList();
-        if (allAudio.isEmpty) {
-          throw Exception('Nenhum stream de áudio disponível');
-        }
-
-        final qualityInt =
-            int.tryParse(_downloadQuality.replaceAll('k', '')) ?? 192;
-        final chosen = allAudio
-            .where((s) => s.bitrate.kiloBitsPerSecond <= qualityInt)
-            .toList();
-        streamInfo = chosen.isNotEmpty ? chosen.last : allAudio.last;
-      } else {
-        final allVideo = manifest.muxed.toList();
-        if (allVideo.isEmpty) {
-          throw Exception('Nenhum stream de vídeo disponível');
-        }
-
-        final desiredHeight =
-            int.tryParse(_downloadQuality.replaceAll('p', '')) ?? 720;
-        final chosen = allVideo.firstWhere(
-          (s) => s.videoResolution.height == desiredHeight,
-          orElse: () => allVideo.last,
-        );
-        streamInfo = chosen;
-      }
-
-      final dir = await getApplicationDocumentsDirectory();
-      final savePath = Directory('${dir.path}/YouTubeDownloader');
-      await savePath.create(recursive: true);
-
-      final filename =
-          '${_sanitizeFileName(video.title)}.${streamInfo.container.name}';
-      final file = File('${savePath.path}/$filename');
-      final output = file.openWrite();
-
-      await _setStatus('Baixando para $filename...');
-      final stream = yt.videos.streamsClient.get(streamInfo);
-      await stream.pipe(output);
-      await output.flush();
-      await output.close();
-
-      await _setStatus('Download local concluído: ${file.path}');
-      _scaffoldMessengerKey.currentState?.showSnackBar(
-        SnackBar(content: Text('Download concluído no celular: ${file.path}')),
-      );
-    } catch (e) {
-      _scaffoldMessengerKey.currentState?.showSnackBar(
-        SnackBar(
-            content: Text('Erro download local: $e'),
-            backgroundColor: Colors.red),
-      );
-      await _setStatus('Erro download local: $e');
-    } finally {
-      yt.close();
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-    }
-  }
-
   void _startPolling(String taskId) {
     Future.doWhile(() async {
       await Future.delayed(const Duration(seconds: 3));
@@ -377,9 +302,8 @@ class _MyAppState extends State<MyApp> {
         if (res.toLowerCase().contains('concluído') ||
             res.toLowerCase().contains('finished') ||
             res.toLowerCase().contains('100%')) {
-          _scaffoldMessengerKey.currentState?.showSnackBar(
-            const SnackBar(content: Text('Download concluído no servidor!')),
-          );
+          await NotificationService.show(
+              'Sucesso', 'Download concluído no servidor!');
           return false; // Para o loop
         }
         if (res.toLowerCase().contains('erro') ||
@@ -389,58 +313,6 @@ class _MyAppState extends State<MyApp> {
       }
       return true; // Continua tentando
     });
-  }
-
-  Future<void> _downloadFileToDevice() async {
-    final taskId = _taskId.text.trim();
-    if (taskId.isEmpty) {
-      await _setStatus('Informe Task ID primeiro para baixar no celular');
-      return;
-    }
-
-    try {
-      await _setStatus('Verificando status da task...');
-      final progressString = await _api.downloadProgress(taskId);
-      final progressJson = jsonDecode(progressString);
-      final status = progressJson['status']?.toString().toLowerCase();
-      if (status != 'done') {
-        await _setStatus('Task ainda não concluída ($status). Aguarde.');
-        return;
-      }
-
-      setState(() => _isLoading = true);
-      await _setStatus('Baixando arquivo do servidor...');
-      final fileBytes = await _api.downloadFileFromServer(taskId);
-
-      final dir = await getApplicationDocumentsDirectory();
-      final outputDir = Directory('${dir.path}/YouTubeDownloader');
-      await outputDir.create(recursive: true);
-
-      final originalFilePath = progressJson['file']?.toString();
-      final extension =
-          originalFilePath != null && originalFilePath.contains('.')
-              ? originalFilePath.split('.').last
-              : 'dat';
-      final fileName =
-          'youtube_${DateTime.now().millisecondsSinceEpoch}.$extension';
-      final savedFile = File('${outputDir.path}/$fileName');
-      await savedFile.writeAsBytes(fileBytes);
-
-      await _setStatus('Arquivo salvo no celular: ${savedFile.path}');
-      _scaffoldMessengerKey.currentState?.showSnackBar(
-        SnackBar(content: Text('Download salvo em ${savedFile.path}')),
-      );
-    } catch (e) {
-      _scaffoldMessengerKey.currentState?.showSnackBar(
-        SnackBar(
-            content: Text('Erro ao salvar no celular: $e'),
-            backgroundColor: Colors.red),
-      );
-      await _setStatus('Erro ao salvar no celular: $e');
-    } finally {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-    }
   }
 
   void _logout() {
@@ -517,7 +389,6 @@ class _MyAppState extends State<MyApp> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          if (!mounted) return;
                           setState(() => _isLoading = true);
                           await _setStatus('Fazendo login...');
                           try {
@@ -529,12 +400,13 @@ class _MyAppState extends State<MyApp> {
                                 const SnackBar(
                                     content: Text('Login realizado!')),
                               );
+                              await NotificationService.show(
+                                  'Login', 'Autenticado com sucesso');
                               await _loadHistory();
                             }
                           } catch (e) {
                             await _setStatus('Erro: $e');
                           } finally {
-                            if (!mounted) return;
                             setState(() => _isLoading = false);
                           }
                         },
@@ -648,67 +520,56 @@ class _MyAppState extends State<MyApp> {
                   ),
                   const SizedBox(height: 14),
                   if (!_isLoading)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () async {
-                            if (!mounted) return;
-                            setState(() => _isLoading = true);
-                            final url = _downloadUrl.text.trim();
-                            if (url.isEmpty) {
-                              await _setStatus('Informe a URL para download');
-                              if (!mounted) return;
-                              setState(() => _isLoading = false);
-                              return;
-                            }
+                    ElevatedButton(
+                      onPressed: () async {
+                        setState(() => _isLoading = true);
+                        final url = _downloadUrl.text.trim();
+                        if (url.isEmpty) {
+                          await _setStatus('Informe a URL para download');
+                          return;
+                        }
 
-                            try {
-                              await _setStatus('Obtendo informações...');
-                              final info = await _api.getVideoInfo(url);
-                              final title = info?['title'] ?? 'Vídeo/Áudio';
+                        try {
+                          await _setStatus('Obtendo informações...');
+                          final info = await _api.getVideoInfo(url);
+                          final title = info?['title'] ?? 'Vídeo/Áudio';
 
-                              await _setStatus(
-                                  'Iniciando download de "$title"...');
-                              final t = await _api.download(
-                                url: url,
-                                mode: _downloadMode,
-                                format: _downloadFormat,
-                                quality: _downloadQuality,
-                              );
+                          await NotificationService.show(
+                            'Download Iniciado',
+                            'Baixando: $title',
+                          );
 
-                              setState(() {
-                                _taskId.text = t;
-                              });
-                              await _setStatus(
-                                  'Processando... acompanhando progresso...');
-                              _startPolling(t);
-                              _scaffoldMessengerKey.currentState?.showSnackBar(
-                                const SnackBar(
-                                    content:
-                                        Text('Download iniciado no servidor!')),
-                              );
-                            } catch (e) {
-                              _scaffoldMessengerKey.currentState?.showSnackBar(
-                                SnackBar(
-                                    content: Text('Erro: $e'),
-                                    backgroundColor: Colors.red),
-                              );
-                              await _setStatus('Erro de conexão: $e');
-                            } finally {
-                              if (!mounted) return;
-                              setState(() => _isLoading = false);
-                            }
-                          },
-                          child: const Text('Iniciar Download (Servidor)'),
-                        ),
-                        const SizedBox(height: 8),
-                        ElevatedButton(
-                          onPressed: _downloadDirectToDevice,
-                          child: const Text(
-                              'Download direto (celular tipo Snaptube)'),
-                        ),
-                      ],
+                          await _setStatus('Iniciando download...');
+                          final t = await _api.download(
+                            url: url,
+                            mode: _downloadMode,
+                            format: _downloadFormat,
+                            quality: _downloadQuality,
+                          );
+
+                          setState(() {
+                            _taskId.text = t;
+                          });
+                          await _setStatus(
+                              'Processando... acompanhando progresso...');
+                          _startPolling(t);
+                          _scaffoldMessengerKey.currentState?.showSnackBar(
+                            const SnackBar(
+                                content:
+                                    Text('Download iniciado no servidor!')),
+                          );
+                        } catch (e) {
+                          _scaffoldMessengerKey.currentState?.showSnackBar(
+                            SnackBar(
+                                content: Text('Erro: $e'),
+                                backgroundColor: Colors.red),
+                          );
+                          await _setStatus('Erro de conexão: $e');
+                        } finally {
+                          setState(() => _isLoading = false);
+                        }
+                      },
+                      child: const Text('Iniciar Download'),
                     )
                   else
                     const Center(
@@ -758,11 +619,6 @@ class _MyAppState extends State<MyApp> {
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: _downloadFileToDevice,
-                    child: const Text('Salvar arquivo no celular'),
                   ),
                   const SizedBox(height: 10),
                   ElevatedButton(

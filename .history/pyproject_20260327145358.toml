@@ -25,14 +25,22 @@ dependencies = [
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+pythonVersion = "3.14"
 pythonVersion = "3.12"
 extraPaths = ["src"]
 typeCheckingMode = "off"
 
+[tool.ty]
+python-version = "3.14"
 [tool.ty.environment]
 python-version = "3.12"
+venv-path = ".venv"
+
+[tool.ty.environment]
 extra-paths = ["src", "."]
 
+[tool.ty.rules]
+ignore = ["unresolved-import"]
 
 [tool.ruff]
 line-length = 100

@@ -31,8 +31,11 @@ typeCheckingMode = "off"
 
 [tool.ty.environment]
 python-version = "3.12"
+venv-path = ".venv"
 extra-paths = ["src", "."]
 
+[tool.ty.rules]
+ignore = ["unresolved-import"]
 
 [tool.ruff]
 line-length = 100

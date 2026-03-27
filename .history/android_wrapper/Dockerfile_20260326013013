@@ -6,18 +6,8 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Garante que a raiz do app esteja no PATH do Python para encontrar o módulo 'src'
-ENV PYTHONPATH=/app
-
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 COPY . .
-
-# Garante que as pastas sejam reconhecidas como módulos Python
-RUN mkdir -p src/server src/downloader && \
-    touch src/__init__.py && \
-    touch src/server/__init__.py && \
-    touch src/downloader/__init__.py
-
 EXPOSE 8000
 CMD ["uvicorn", "src.server.main:app", "--host", "0.0.0.0", "--port", "8000"]

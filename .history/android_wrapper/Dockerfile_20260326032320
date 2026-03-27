@@ -14,6 +14,9 @@ RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Garante que as pastas sejam reconhecidas como módulos Python
+RUN touch src/__init__.py \
+    && touch src/server/__init__.py \
+    && touch src/downloader/__init__.py
 RUN mkdir -p src/server src/downloader && \
     touch src/__init__.py && \
     touch src/server/__init__.py && \

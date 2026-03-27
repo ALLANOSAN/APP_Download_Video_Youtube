@@ -32,7 +32,7 @@ typeCheckingMode = "off"
 [tool.ty.environment]
 python-version = "3.12"
 extra-paths = ["src", "."]
-
+exclude = ["**/src/gui/**"]
 
 [tool.ruff]
 line-length = 100

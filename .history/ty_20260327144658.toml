@@ -1,0 +1,7 @@
+# Configuração do ty linter
+[tool.ty.environment]
+ python-version = "3.12.12"
+ venv-path = ".venv"
+
+[rules]
+ignore = ["unresolved-import"]
