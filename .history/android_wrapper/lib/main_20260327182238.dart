@@ -160,6 +160,18 @@ class ApiClient {
     return 'Falha progress: ${r.statusCode} ${r.body}';
   }
 
+  Future<Uint8List> downloadFileFromServer(String taskId) async {
+    final r = await http.get(Uri.parse('$baseUrl/download_file/$taskId'),
+        headers: _jsonHeaders);
+    if (_handleUnauthorized(r)) {
+      throw Exception('Unauthorized - faça login novamente');
+    }
+    if (r.statusCode == 200) {
+      return r.bodyBytes;
+    }
+    throw Exception('Falha download_file: ${r.statusCode} ${r.body}');
+  }
+
   Future<String> cancelDownload(String taskId) async {
     final r = await http.delete(Uri.parse('$baseUrl/download_task/$taskId'),
         headers: _jsonHeaders);
@@ -287,6 +299,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     if (!mounted) return;
+    setState(() => _isLoading = true);
     setState(() {
       _isLoading = true;
       _directDownloadProgress = 0.0;
@@ -336,14 +349,16 @@ class _MyAppState extends State<MyApp> {
           '${_sanitizeFileName(video.title)}.${streamInfo.container.name}';
       final file = File('${savePath.path}/$filename');
       final output = file.openWrite();
-
+      
       final size = streamInfo.size.totalBytes;
       var count = 0;
 
+      await _setStatus('Baixando para $filename...');
       await _setStatus('Baixando: $filename');
-
+      
       final stream = yt.videos.streamsClient.get(streamInfo);
-
+      await stream.pipe(output);
+      
       await for (final data in stream) {
         count += data.length;
         final progress = count / size;
@@ -385,24 +400,20 @@ class _MyAppState extends State<MyApp> {
       if (!mounted || !_api.isAuthenticated) return false;
 
       try {
-        final progressResponse = await _api.downloadProgress(taskId);
-        final Map<String, dynamic> data = jsonDecode(progressResponse);
+        final res = await _api.downloadProgress(taskId);
+        // Se o servidor retornar o status em texto ou JSON, tratamos aqui
+        await _setStatus('Status: $res');
 
-        final status = data['status']?.toString().toLowerCase() ?? '';
-        final progress = data['progress']?.toString() ?? '0%';
-
-        await _setStatus('Servidor: $status ($progress)');
-
-        if (status == 'done' || status == 'finished' || progress == '100%') {
+        if (res.toLowerCase().contains('concluído') ||
+            res.toLowerCase().contains('finished') ||
+            res.toLowerCase().contains('100%')) {
           _scaffoldMessengerKey.currentState?.showSnackBar(
             const SnackBar(content: Text('Download concluído no servidor!')),
           );
           return false; // Para o loop
         }
-
-        if (status == 'error' || status == 'failed') {
-          await _setStatus(
-              'Erro no servidor: ${data['message'] ?? 'Falha no yt-dlp'}');
+        if (res.toLowerCase().contains('erro') ||
+            res.toLowerCase().contains('fail')) {
           return false;
         }
       } catch (e) {
@@ -424,14 +435,14 @@ class _MyAppState extends State<MyApp> {
       final progressString = await _api.downloadProgress(taskId);
       final progressJson = jsonDecode(progressString);
       final status = progressJson['status']?.toString().toLowerCase();
-      if (status != 'done' && status != 'finished') {
-        await _setStatus('Task status: $status. Aguarde a conclusão.');
+      if (status != 'done') {
+        await _setStatus('Task ainda não concluída ($status). Aguarde.');
         return;
       }
 
       setState(() => _isLoading = true);
       await _setStatus('Baixando arquivo do servidor...');
-      final fileBytes = await _api.downloadFile(taskId);
+      final fileBytes = await _api.downloadFileFromServer(taskId);
 
       final dir = await getApplicationDocumentsDirectory();
       final outputDir = Directory('${dir.path}/YouTubeDownloader');
@@ -570,17 +581,15 @@ class _MyAppState extends State<MyApp> {
 
                 const SizedBox(height: 24),
                 if (_isLoading)
+                  const Center(child: CircularProgressIndicator()),
                   Column(
                     children: [
-                      LinearProgressIndicator(
-                          value: _directDownloadProgress > 0
-                              ? _directDownloadProgress
-                              : null),
+                      LinearProgressIndicator(value: _directDownloadProgress > 0 ? _directDownloadProgress : null),
                       const SizedBox(height: 8),
                       Text(
-                        _directDownloadProgress > 0
-                            ? '${(_directDownloadProgress * 100).toStringAsFixed(1)}%'
-                            : 'Processando...',
+                        _directDownloadProgress > 0 
+                          ? '${(_directDownloadProgress * 100).toStringAsFixed(1)}%' 
+                          : 'Processando...',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ],

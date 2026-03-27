@@ -240,11 +240,14 @@ def _run_download_task(task_id: str, request: DownloadRequest):
                 {"status": "error", "message": "Cancelado", "percent": progress.get("percent", 0)}
             )
             raise Exception("Cancelado")
-
+        
         # Atualiza progresso com segurança
         percent = info.get("percent", 0)
         progress["percent"] = float(percent) if percent else 0.0
         progress["message"] = str(info.get("status", "processando"))
+
+        progress["percent"] = float(info.get("percent", 0))
+        progress["message"] = info.get("status", "")
 
     downloader = VideoDownloader(output_dir=str(task_dir), progress_callback=progress_callback)
     download_tasks[task_id]["downloader"] = downloader
