@@ -24,7 +24,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from .database import get_session, create_db_and_tables
 from .models import User, UserCreate, HistoryItem, HistoryItemCreate
 from .auth import verify_password, get_password_hash, create_access_token, SECRET_KEY, ALGORITHM
-from downloader.video_downloader import VideoDownloader
+from downloader.video_downloader import VideoDownloader  # ty: ignore[unresolved-import]
 
 
 @asynccontextmanager
@@ -167,19 +167,6 @@ def add_to_history(
     return new_item
 
 
-@app.get("/video_info")
-def get_video_info(url: str):
-    """Endpoint para obter metadados do vídeo via yt-dlp sem baixar."""
-    try:
-        downloader = VideoDownloader(output_dir="/tmp")
-        # Assumindo que seu VideoDownloader tenha um método para extrair info
-        # ou usando yt-dlp diretamente para extrair metadados.
-        info = downloader.extract_info(url)  # Substitua pelo método real da sua classe
-        return info
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Erro ao obter info: {str(e)}")
-
-
 @app.get("/")
 def read_root():
     return {"message": "YouTube Music Pro Sync API is online", "docs": "/docs"}
@@ -247,9 +234,8 @@ def _run_download_task(task_id: str, request: DownloadRequest):
 
     def progress_callback(info):
         if cancel_event and cancel_event.is_set():
-            downloader_instance = download_tasks.get(task_id, {}).get("downloader")
-            if downloader_instance:
-                downloader_instance.stop()
+            if download_tasks.get(task_id, {}).get("downloader"):
+                download_tasks[task_id]["downloader"].stop()
             progress.update(
                 {"status": "error", "message": "Cancelado", "percent": progress.get("percent", 0)}
             )

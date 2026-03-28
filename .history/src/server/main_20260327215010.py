@@ -174,7 +174,7 @@ def get_video_info(url: str):
         downloader = VideoDownloader(output_dir="/tmp")
         # Assumindo que seu VideoDownloader tenha um método para extrair info
         # ou usando yt-dlp diretamente para extrair metadados.
-        info = downloader.extract_info(url)  # Substitua pelo método real da sua classe
+        info = downloader.extract_info(url) # Substitua pelo método real da sua classe
         return info
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Erro ao obter info: {str(e)}")
@@ -247,6 +247,8 @@ def _run_download_task(task_id: str, request: DownloadRequest):
 
     def progress_callback(info):
         if cancel_event and cancel_event.is_set():
+            if download_tasks.get(task_id, {}).get("downloader"):
+                download_tasks[task_id]["downloader"].stop()
             downloader_instance = download_tasks.get(task_id, {}).get("downloader")
             if downloader_instance:
                 downloader_instance.stop()

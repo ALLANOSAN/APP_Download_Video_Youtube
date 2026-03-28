@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:http/http.dart' as http;
 
@@ -274,10 +275,15 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _downloadDirectToDevice() async {
-    debugPrint('Iniciando _downloadDirectToDevice...'); // Debug print
+log('Iniciando _downloadDirectToDevice...'); // Debug print
     final url = _downloadUrl.text.trim();
     if (url.isEmpty) {
       await _setStatus('Informe URL do YouTube para download local');
+      return;
+    }
+
+    if (!await Permission.storage.request().isGranted) {
+      await _setStatus('Permissão de armazenamento necessária');
       return;
     }
 
@@ -367,7 +373,7 @@ class _MyAppState extends State<MyApp> {
       );
       await _setStatus('Erro download local: $e');
     } finally {
-      debugPrint('Finalizando _downloadDirectToDevice.'); // Debug print
+      print('Finalizando _downloadDirectToDevice.'); // Debug print
       yt.close();
       if (mounted) {
         setState(() => _isLoading = false);
